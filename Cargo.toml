@@ -1,11 +1,12 @@
 [package]
 name = "pdf-to-image"
-version = "0.4.0"
+version = "1.0.0"
 edition = "2024"
 
 [dependencies]
 pdfium-render = { version = "0.9.0", features = ["thread_safe"] }
-image = { version = "0.25.10", features = ["jpeg", "png", "webp"] }
+image = { version = "0.25.10", features = ["jpeg", "png", "webp", "tiff"] }
+webp = "0.3.1"
 rayon = "1.11.0"
 
 [[bin]]

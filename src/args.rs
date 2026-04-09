@@ -4,6 +4,7 @@ pub enum OutputFormat {
     Jpg,
     Png,
     WebP,
+    Tiff,
 }
 
 impl OutputFormat {
@@ -12,6 +13,7 @@ impl OutputFormat {
             OutputFormat::Jpg => "jpg",
             OutputFormat::Png => "png",
             OutputFormat::WebP => "webp",
+            OutputFormat::Tiff => "tiff",
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::args::{OutputFormat, RenderConfig};
 use crate::matrix::Matrix;
 use crate::rect::Rect;
@@ -87,9 +89,9 @@ fn rect_is_outside_all_directions() {
     let trim = Rect::from_corners(30.0, 30.0, 642.0, 822.0);
 
     assert!(Rect::new(650.0, 100.0, 10.0, 10.0).is_outside(&trim)); // right
-    assert!(Rect::new(0.0, 100.0, 10.0, 10.0).is_outside(&trim));   // left
+    assert!(Rect::new(0.0, 100.0, 10.0, 10.0).is_outside(&trim)); // left
     assert!(Rect::new(100.0, 830.0, 10.0, 10.0).is_outside(&trim)); // above
-    assert!(Rect::new(100.0, 0.0, 10.0, 10.0).is_outside(&trim));   // below
+    assert!(Rect::new(100.0, 0.0, 10.0, 10.0).is_outside(&trim)); // below
 }
 
 #[test]
@@ -188,8 +190,7 @@ fn encode_save_webp_writes_file() {
 fn process_pdf_renders_pages() {
     let input = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("test/test_assets/pdf_test_data_print_v2.pdf");
-    let out_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test/test_result");
+    let out_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("test/test_result");
     std::fs::create_dir_all(&out_dir).unwrap();
 
     let config = RenderConfig { dpi: 150 };
@@ -201,4 +202,142 @@ fn process_pdf_renders_pages() {
     assert!(output_file.exists(), "expected rendered page file to exist");
     assert!(std::fs::metadata(&output_file).unwrap().len() > 0);
     std::fs::remove_file(&output_file).ok();
+}
+
+#[test]
+#[ignore]
+fn bench_process_pdf_150dpi() {
+    // run with: DYLD_LIBRARY_PATH=$HOME/.cargo/bin cargo test bench_ -- --nocapture --ignored --test-threads=1
+    let input = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("test/test_assets/secret_fixtures/fixture-001.pdf");
+    let output = Path::new(env!("CARGO_MANIFEST_DIR")).join("test/test_result/secret_results");
+    std::fs::create_dir_all(&output).unwrap();
+
+    let start = std::time::Instant::now();
+    let status = std::process::Command::new("p2i")
+        .args(["-dpi", "150"])
+        .arg(&input)
+        .arg(&output)
+        .status()
+        .expect("p2i not found - run `cargo install -- path .` first");
+    let elapsed = start.elapsed();
+
+    assert!(status.success(), "p2i exited with failure");
+    println!("process_pdf 150dpi: {elapsed:?}");
+    assert!(elapsed.as_secs() < 60, "render took too long: {elapsed:?}")
+}
+
+#[test]
+#[ignore]
+fn bench_process_pdf_300dpi() {
+    // run with: DYLD_LIBRARY_PATH=$HOME/.cargo/bin cargo test bench_ -- --nocapture --ignored --test-threads=1
+    let input = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("test/test_assets/secret_fixtures/fixture-001.pdf");
+    let output = Path::new(env!("CARGO_MANIFEST_DIR")).join("test/test_result/secret_results");
+    std::fs::create_dir_all(&output).unwrap();
+
+    let start = std::time::Instant::now();
+    let status = std::process::Command::new("p2i")
+        .args(["-dpi", "300"])
+        .arg(&input)
+        .arg(&output)
+        .status()
+        .expect("p2i not found - run `cargo install -- path .` first");
+    let elapsed = start.elapsed();
+
+    assert!(status.success(), "p2i exited with failure");
+    println!("process_pdf 300dpi: {elapsed:?}");
+    assert!(elapsed.as_secs() < 60, "render took too long: {elapsed:?}")
+}
+
+#[test]
+#[ignore]
+fn bench_process_pdf_600dpi() {
+    // run with: DYLD_LIBRARY_PATH=$HOME/.cargo/bin cargo test bench_ -- --nocapture --ignored --test-threads=1
+    let input = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("test/test_assets/secret_fixtures/fixture-001.pdf");
+    let output = Path::new(env!("CARGO_MANIFEST_DIR")).join("test/test_result/secret_results");
+    std::fs::create_dir_all(&output).unwrap();
+
+    let start = std::time::Instant::now();
+    let status = std::process::Command::new("p2i")
+        .args(["-dpi", "600"])
+        .arg(&input)
+        .arg(&output)
+        .status()
+        .expect("p2i not found - run `cargo install -- path .` first");
+    let elapsed = start.elapsed();
+
+    assert!(status.success(), "p2i exited with failure");
+    println!("process_pdf 600dpi: {elapsed:?}");
+    assert!(elapsed.as_secs() < 60, "render took too long: {elapsed:?}")
+}
+
+#[test]
+#[ignore]
+fn bench_process_pdf_book_150dpi() {
+    // run with: DYLD_LIBRARY_PATH=$HOME/.cargo/bin cargo test bench_process_pdf_book -- --nocapture --ignored --test-threads=1
+    let input = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("test/test_assets/secret_fixtures/fixture-002-book.pdf");
+    let output = Path::new(env!("CARGO_MANIFEST_DIR")).join("test/test_result/secret_results");
+    std::fs::create_dir_all(&output).unwrap();
+
+    let start = std::time::Instant::now();
+    let status = std::process::Command::new("p2i")
+        .args(["-dpi", "150"])
+        .arg(&input)
+        .arg(&output)
+        .status()
+        .expect("p2i not found - run `cargo install -- path .` first");
+    let elapsed = start.elapsed();
+
+    assert!(status.success(), "p2i exited with failure");
+    println!("process_pdf_book 150dpi: {elapsed:?}");
+    assert!(elapsed.as_secs() < 60, "render took too long: {elapsed:?}")
+}
+
+#[test]
+#[ignore]
+fn bench_process_pdf_book_300dpi() {
+    // run with: DYLD_LIBRARY_PATH=$HOME/.cargo/bin cargo test bench_process_pdf_book -- --nocapture --ignored --test-threads=1
+    let input = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("test/test_assets/secret_fixtures/fixture-002-book.pdf");
+    let output = Path::new(env!("CARGO_MANIFEST_DIR")).join("test/test_result/secret_results");
+    std::fs::create_dir_all(&output).unwrap();
+
+    let start = std::time::Instant::now();
+    let status = std::process::Command::new("p2i")
+        .args(["-dpi", "300"])
+        .arg(&input)
+        .arg(&output)
+        .status()
+        .expect("p2i not found - run `cargo install -- path .` first");
+    let elapsed = start.elapsed();
+
+    assert!(status.success(), "p2i exited with failure");
+    println!("process_pdf_book 300dpi: {elapsed:?}");
+    assert!(elapsed.as_secs() < 60, "render took too long: {elapsed:?}")
+}
+
+#[test]
+#[ignore]
+fn bench_process_pdf_book_600dpi() {
+    // run with: DYLD_LIBRARY_PATH=$HOME/.cargo/bin cargo test bench_process_pdf_book -- --nocapture --ignored --test-threads=1
+    let input = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("test/test_assets/secret_fixtures/fixture-002-book.pdf");
+    let output = Path::new(env!("CARGO_MANIFEST_DIR")).join("test/test_result/secret_results");
+    std::fs::create_dir_all(&output).unwrap();
+
+    let start = std::time::Instant::now();
+    let status = std::process::Command::new("p2i")
+        .args(["-dpi", "600"])
+        .arg(&input)
+        .arg(&output)
+        .status()
+        .expect("p2i not found - run `cargo install -- path .` first");
+    let elapsed = start.elapsed();
+
+    assert!(status.success(), "p2i exited with failure");
+    println!("process_pdf_book 600dpi: {elapsed:?}");
+    assert!(elapsed.as_secs() < 60, "render took too long: {elapsed:?}")
 }

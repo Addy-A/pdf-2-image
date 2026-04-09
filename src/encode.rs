@@ -35,7 +35,13 @@ pub fn save(
     let image_format = match format {
         OutputFormat::Png => image::ImageFormat::Png,
         OutputFormat::Jpg => image::ImageFormat::Jpeg,
-        OutputFormat::WebP => image::ImageFormat::WebP,
+        OutputFormat::Tiff => image::ImageFormat::Tiff,
+        OutputFormat::WebP => {
+            let encoder = webp::Encoder::from_image(image).unwrap();
+            let encoded = encoder.encode(80.0);
+            std::fs::write(path, &*encoded)?;
+            return Ok(());
+        }
     };
     image.save_with_format(path, image_format)
 }

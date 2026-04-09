@@ -1,6 +1,6 @@
 # PDF To Image
 
-Rasterize PDF pages to JPG, PNG, or WebP at a caller-specified DPI.
+Rasterize PDF pages to JPG, PNG, WebP, or TIFF at a caller-specified DPI.
 
 ## Constraints
 
@@ -14,8 +14,9 @@ Rasterize PDF pages to JPG, PNG, or WebP at a caller-specified DPI.
 
 ## Status
 
-**Alpha.** Core pipeline implemented and compiling. Rasterization, encoding, and
-CLI argument parsing are functional. See [Known Limitations](#known-limitations)
+**Beta.** Pipeline validated against production-level prepress PDFs across
+multiple document types, page counts, and DPI settings. Rasterization, encoding,
+and CLI argument parsing are functional. See [Known Limitations](#known-limitations)
 for current tradeoffs.
 
 ---
@@ -29,7 +30,10 @@ for current tradeoffs.
       via Google's PDFium engine
     - [`image 0.25.10`](https://crates.io/crates/image)
       ([source](https://github.com/image-rs/image)) -- bitmap encoding to
-      JPG, PNG, WebP
+      JPG, PNG, TIFF
+    - [`webp 0.3.1`](https://crates.io/crates/webp)
+      ([source](https://github.com/jaredforth/webp)) -- lossy WebP encoding
+      via libwebp bindings (replaces `image` crate's lossless-only WebP encoder)
     - [`rayon 1.11.0`](https://crates.io/crates/rayon)
       ([source](https://github.com/rayon-rs/rayon)) -- retained as a dependency;
       parallel rendering is not currently active (see [Known Limitations](#known-limitations))
@@ -49,7 +53,7 @@ No `clap`. Argument parsing is manual, consistent with `ptrim` and `prsz`.
 ### Single-file mode
 
 ```bash
-p2i [-dpi <n>] [-format <jpg|jpeg|png|webp>] [-prepress] <input.pdf> [output/dir]
+p2i [-dpi <n>] [-format <jpg|jpeg|png|webp|tiff>] [-prepress] <input.pdf> [output/dir]
 ```
 
 | Flag / Argument     | Description                                                                               |
@@ -57,7 +61,7 @@ p2i [-dpi <n>] [-format <jpg|jpeg|png|webp>] [-prepress] <input.pdf> [output/dir
 | `<input.pdf>`        | Path to the source PDF.                                                                  |
 | `[output/dir]`       | Output directory (default: same directory as input).                                     |
 | `-dpi <n>`           | Render DPI (default: 150).                                                               |
-| `-format <fmt>`      | Output format: `jpg`, `jpeg`, `png`, `webp` (default: `jpg`).                           |
+| `-format <fmt>`      | Output format: `jpg`, `jpeg`, `png`, `webp`, `tiff` (default: `jpg`).                   |
 | `-prepress`          | Shorthand for `-dpi 300 -format jpg`. Intended for print-ready output.                   |
 
 ```bash
@@ -66,6 +70,9 @@ p2i artwork.pdf
 
 # Single file → PNG at 300 DPI
 p2i -dpi 300 -format png artwork.pdf output/
+
+# Single file → TIFF at 300 DPI (RIP / Photoshop hand-off)
+p2i -dpi 300 -format tiff artwork.pdf output/
 
 # Prepress shorthand (300 DPI, JPG)
 p2i -prepress artwork.pdf output/
@@ -88,7 +95,7 @@ an optional output directory as the final argument.
 Each page is written as `<stem>-p<NNN>.<ext>` inside the output directory.
 
 ```bash
-# Batch → WebP at 150 DPI
+# Batch → WebP at 150 DPI (lossy, for web proof review)
 p2i -format webp '[art-1.pdf, art-2.pdf, art-3.pdf]' output/previews/
 
 # Batch — each rendered file beside its input
@@ -346,6 +353,42 @@ qpdf --check input.pdf
 
 Install: `brew install qpdf poppler` (macOS) or `apt install qpdf poppler-utils`
 (Debian/Ubuntu).
+
+---
+
+## Benchmarks
+
+Measured on production prepress PDFs (CMYK, image-heavy). Hardware: Apple Mac
+Studio (Apple Silicon). Binary built with `cargo install --path .` (release).
+
+Acrobat settings: Save As JPEG, Quality: Maximum, Baseline (Standard),
+Colorspace: CMYK, Color Management: Embed profile. Output quality between
+p2i and Acrobat at equivalent DPI is visually indistinguishable for prepress
+flattening workflows.
+
+**Fixture A — 2-page, object-dense (p2i v0.4.0)**
+
+| DPI  | p2i       | Acrobat Pro | Speedup   |
+|------|-----------|-------------|-----------|
+| 150  | 878ms     | —           | —         |
+| 300  | 1.64s     | 6s          | ~3.6×     |
+| 600  | 4.19s     | 1m 46s      | ~25×      |
+
+**Fixture B — 52-page book, medium-density objects (p2i v0.4.0)**
+
+| DPI  | p2i       | Acrobat Pro | Speedup   |
+|------|-----------|-------------|-----------|
+| 150  | 2.88s     | —           | —         |
+| 300  | 5.70s     | 18s         | ~3.2×     |
+| 600  | 16.46s    | 2m 3s       | ~7.5×     |
+
+> **Note:** The speedup gap narrows at higher page counts because Acrobat's
+> fixed startup and color management overhead is proportionally smaller across
+> more pages. The render-time advantage remains significant at all tested DPIs.
+
+> **2400 DPI:** PDFium hits an internal bitmap allocation ceiling at this
+> resolution on standard page sizes (~540 megapixels / ~1.6 GB raw per page).
+> Not a supported target; 600 DPI is the practical maximum.
 
 ---
 

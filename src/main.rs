@@ -75,6 +75,7 @@ fn main() {
             "-format" => {
                 i += 1;
                 format = match args.get(i).map(|s| s.as_str()) {
+                    Some("tiff") => OutputFormat::Tiff,
                     Some("png") => OutputFormat::Png,
                     Some("jpeg") | Some("jpg") => OutputFormat::Jpg,
                     Some("webp") => OutputFormat::WebP,
@@ -120,10 +121,10 @@ fn main() {
     } else {
         if positional.is_empty() {
             eprintln!(
-                "Usage: p2i [-dpi <n>] [-format <jpg|jpeg|png|webp>] [-prepress] [-mega-prepress] <input.pdf> [output/dir]"
+                "Usage: p2i [-dpi <n>] [-format <tiff|jpg|jpeg|png|webp>] [-prepress] [-mega-prepress] <input.pdf> [output/dir]"
             );
             eprintln!(
-                "       p2i [-dpi <n>] [-format <jpg|jpeg|png|webp>] [-prepress] [-mega-prepress] [input-1.pdf, input-2.pdf, ...][output/dir]"
+                "       p2i [-dpi <n>] [-format <tiff|jpg|jpeg|png|webp>] [-prepress] [-mega-prepress] [input-1.pdf, input-2.pdf, ...][output/dir]"
             );
             process::exit(1);
         }
