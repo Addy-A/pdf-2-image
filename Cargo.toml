@@ -1,0 +1,13 @@
+[package]
+name = "pdf-to-image"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+pdfium-render = { version = "0.9.0", features = ["thread_safe"] }
+image = { version = "0.25.10", features = ["jpeg", "png", "webp"] }
+rayon = "1.11.0"
+
+[[bin]]
+name = "p2i"
+path = "src/main.rs"
