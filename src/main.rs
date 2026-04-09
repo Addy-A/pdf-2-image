@@ -59,6 +59,11 @@ fn main() {
                 format = OutputFormat::Jpg;
                 i += 1;
             }
+            "-mega-prepress" => {
+                dpi = 600;
+                format = OutputFormat::Jpg;
+                i += 1;
+            }
             "-dpi" => {
                 i += 1;
                 dpi = args.get(i).and_then(|s| s.parse().ok()).unwrap_or_else(|| {
@@ -115,10 +120,10 @@ fn main() {
     } else {
         if positional.is_empty() {
             eprintln!(
-                "Usage: p2i [-dpi <n>] [-format <jpg|jpeg|png|webp>] [-prepress] <input.pdf> [output/dir]"
+                "Usage: p2i [-dpi <n>] [-format <jpg|jpeg|png|webp>] [-prepress] [-mega-prepress] <input.pdf> [output/dir]"
             );
             eprintln!(
-                "       p2i [-dpi <n>] [-format <jpg|jpeg|png|webp>] [-prepress] [input-1.pdf, input-2.pdf, ...][output/dir]"
+                "       p2i [-dpi <n>] [-format <jpg|jpeg|png|webp>] [-prepress] [-mega-prepress] [input-1.pdf, input-2.pdf, ...][output/dir]"
             );
             process::exit(1);
         }

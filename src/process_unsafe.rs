@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use pdfium_render::prelude::*;
+use rayon::prelude::*;
 
 use crate::args::{OutputFormat, RenderConfig};
 use crate::encode;
@@ -72,12 +73,32 @@ pub fn process_pdf(
         .unwrap_or_default()
         .to_string_lossy()
         .into_owned();
+    let page_count = document.pages().len();
+    let indices: Vec<i32> = (0..page_count).collect();
 
-    for index in 0..document.pages().len() {
-        let page = document.pages().get(index).unwrap();
-        let image = render_page(&page, config).unwrap();
-        let name = format!("{}-p{:03}.{}", stem, index + 1, format.extension());
-        encode::save(&image, &output_dir.join(name), format).unwrap();
+    const PARALLEL_THRESHOLD: usize = 4;
+
+    if page_count <= PARALLEL_THRESHOLD as i32 {
+        for &index in &indices {
+            let page = document.pages().get(index).unwrap();
+            let image = render_page(&page, config).unwrap();
+            let name = format!("{}-p{:03}.{}", stem, index + 1, format.extension());
+            let path = output_dir.join(name);
+            encode::save(&image, &path, format).unwrap();
+        }
+    } else {
+        let input_path_owned = input_path.to_path_buf();
+        let output_dir_owned = output_dir.to_path_buf();
+        let pdfium = std::sync::Arc::new(&pdfium);
+        drop(document);
+        indices.par_iter().for_each(|&index| {
+            let document = pdfium.load_pdf_from_file(&input_path_owned, None).unwrap();
+            let page = document.pages().get(index).unwrap();
+            let image = render_page(&page, config).unwrap();
+            let name = format!("{}-p{:03}.{}", stem, index + 1, format.extension());
+            let path = output_dir_owned.join(name);
+            encode::save(&image, &path, format).unwrap();
+        });
     }
 
     Ok(())

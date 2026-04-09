@@ -10,6 +10,7 @@ Rasterize PDF pages to JPG, PNG, or WebP at a caller-specified DPI.
 | **Prepress-aware DPI**   | Default 150 DPI for proofing. `-prepress` flag forces 300 DPI + JPG.                             |
 | **No paid services**     | No cloud APIs, no external runtime services. PDFium is a local native library.                   |
 | **Standalone**           | No dependency on the other tools in the series at runtime.                                       |
+| **Single-threaded rendering** | Pages are rendered sequentially. PDFium's C library uses process-level global state that is not safe for concurrent document access. See [Known Limitations](#known-limitations). |
 
 ## Status
 
@@ -30,8 +31,8 @@ for current tradeoffs.
       ([source](https://github.com/image-rs/image)) -- bitmap encoding to
       JPG, PNG, WebP
     - [`rayon 1.11.0`](https://crates.io/crates/rayon)
-      ([source](https://github.com/rayon-rs/rayon)) -- parallel page rendering
-      across CPU cores
+      ([source](https://github.com/rayon-rs/rayon)) -- retained as a dependency;
+      parallel rendering is not currently active (see [Known Limitations](#known-limitations))
 - No paid services or external tooling required at runtime.
 
 **Runtime native dependency:** PDFium shared library (`libpdfium.so` /
@@ -224,10 +225,18 @@ This vocabulary (DPI, not pixels) is what prepress operators work in natively.
 ### Parallelism model
 
 Rasterization is CPU-bound. The bottleneck is not disk I/O — it is rendering.
-`rayon`'s work-stealing thread pool is applied at the **page level within a
-single document**, keeping all cores saturated without the complexity of async
-I/O. Multiple input files are processed sequentially at the document level
-(one PDFium context per document).
+Pages are currently rendered **sequentially** within each document. PDFium's
+underlying C library maintains process-level global state: concurrent calls to
+`load_pdf_from_file` across threads produce `PdfiumLibraryInternalError` and
+malloc corruption regardless of the `thread_safe` feature flag (which only
+adds Rust's `Send + Sync` bounds, not C-library thread safety).
+
+An experimental parallel branch is preserved in `process_unsafe.rs` for future
+work. If a version of `pdfium-render` introduces genuine thread-safe C bindings,
+the `par_iter` approach in that file is the intended upgrade path.
+
+Multiple input files in batch mode are also processed sequentially — one
+PDFium context, one document, one page at a time.
 
 ---
 
@@ -267,7 +276,8 @@ src/
     args.rs         -- CLI argument types (InputMode, OutputFormat, RenderConfig)
     render.rs       -- pdfium-render page rasterization → DynamicImage
     encode.rs       -- image crate encode DynamicImage → file (JPG/PNG/WebP)
-    process.rs      -- top-level pipeline (load, dispatch pages, collect output)
+    process.rs          -- top-level pipeline (load, dispatch pages, collect output)
+    process_unsafe.rs   -- experimental parallel rendering branch (non-functional; see Known Limitations)
     rect.rs         -- Rect struct (consistent with sibling repos)
     matrix.rs       -- Matrix struct (consistent with sibling repos)
     tests.rs        -- unit and integration tests (compiled only in test builds)
@@ -359,6 +369,15 @@ ptrim → prsz -t → p2i
 ```
 
 to strip marks, crop to trim, then rasterize.
+
+### Batch performance scales O(n) per file
+
+Because rendering is single-threaded (see above), batch jobs grow linearly with
+total page count across all inputs. A 20-file batch of 10-page documents renders
+200 pages serially. There is no intra-document or inter-document parallelism
+until the PDFium C library exposes thread-safe document access. For time-sensitive
+batch workflows, consider splitting the input list across multiple `p2i` invocations
+in parallel shell processes as a workaround.
 
 ### JPEG quality is fixed
 
